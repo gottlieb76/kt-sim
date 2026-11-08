@@ -9,6 +9,11 @@ The calculator page supports 1–12 D6s, hit/crit thresholds, and a shared rerol
 budget with selectable policies. Inspect each stage's outcomes as exact fractions
 and percentages. Kill Team combat resolution is not implemented yet.
 
+See the [living roadmap](docs/roadmap.md) for milestones and deliverables, and
+the [linked backlog](docs/probability-lab-backlog.md) for evolving ideas and
+acceptance criteria. Next: code-first experiment composition with minimal
+stage inspection.
+
 ## Development
 
 Requires Node.js 24 and npm. An `.nvmrc` file is included for users of nvm.
