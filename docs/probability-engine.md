@@ -60,3 +60,71 @@ rerolls are skipped. These policies are explicit choices, not an optimal combat 
 or all dice succeeding. `Fraction.toPercentage(2)` formats rounded percentage
 strings using bigint arithmetic; the exact internal distribution is unchanged.
 The page compares stages and displays success counts and joint hit/crit outcomes.
+
+## Complete-history composition foundation
+
+`src/engine/experiment.ts` adds the bounded snapshot contract from ADR 0004.
+This API is separate from the reduced calculator above: it retains stable die IDs,
+ordered rolls (face and responsible stage), interpretation history linked to each
+roll revision, and recorded selection policies and target IDs. Each operation copies
+and freezes its output's nested state. Caller-owned inputs are copied rather than
+frozen in place; policy callbacks receive protected snapshots.
+
+```ts
+import {
+  ProbabilityTree, certain, emptyExperiment, rollDice, selectReroll,
+  rerollSelected, classifyDice, assignOutcome,
+} from './src/engine'
+
+const rolled = ProbabilityTree.from('Start', certain(emptyExperiment()))
+  .then('Roll two', rollDice('Roll two', 2))
+const selected = rolled.then('Select misses', selectReroll(
+  'Select misses', 'lowest ID failing die at 3+', 1,
+  state => state.dice.filter(die => die.face < 3).slice(0, 1).map(die => die.id),
+))
+const replaced = selected.then('Reroll', rerollSelected('Reroll'))
+const classified = replaced.then('Classify', classifyDice('Classify', 3, 6))
+const assigned = classified.then('Assign example', state => assignOutcome(
+  'Assign example', 'illustrative assignment policy', state.dice[0].id, 'miss',
+)(state))
+const chance = assigned.probabilityOf(state => state.dice.every(die => die.currentOutcome !== 'miss'))
+// Keep rolled/selected/replaced/classified to inspect intermediate snapshots.
+```
+
+Selection is deterministic and branch-specific; it adds no random mass. Its budget
+is per selection operation, targets are chosen before replacement, and execution
+rejects stale selections and already-rerolled dice. Every die can be rerolled at
+most once in this foundation. `selectedFace` optionally constrains every target
+to the chosen face; it does not imply any named game rule. Arbitrary TypeScript
+policies are trusted developer code, not browser-provided scripts.
+
+Rerolling invalidates a die's current interpretation while retaining historical
+interpretations. Classification and assignment are separate operations. Assignment
+requires valid current classifications; it changes no face or roll provenance.
+TypeScript distinguishes classified and selected snapshots, while runtime checks
+reject missing or discarded information. Adding a custom deterministic stage can
+use `map` and existing operations, for example reclassifying with a different
+threshold. Callbacks must remain pure and preserve the retained-information contract.
+
+Each roll/reroll operation rejects expansions above 100,000 alternatives before
+allocating them, and the enclosing tree separately enforces its active branch limit.
+The full-history API therefore cannot enumerate a complete seven-D6 roll under
+these limits. The reduced calculator continues to support 12 dice, intentionally
+without full histories. A custom tree limit does not raise the per-operation limit.
+Reduce dice/targets or use the reduced calculator when its information is sufficient;
+no mode silently approximates or truncates results. Full-history stages reject
+count-only states rather than inventing lost facts.
+
+The legacy count state now retains `eligibleMisses` separately from total eligible
+dice. This prevents replacement misses from being selected again while original
+hits remain eligible under the non-crits policy. For two dice at 3+/6 with two
+non-crits rerolls, the corrected all-success probability is `169/324`.
+
+`src/application/pool-analysis.ts` coordinates the fixed calculator and prepares
+exact summaries and grouped results independently of React. The workbench consumes
+its ready/error result and hides results on failure; correcting settings or resetting
+recovers evaluation. The fixed calculator remains the workbench's efficient path;
+a general composed-experiment workbench, dependent pools, opposing resolution,
+and deep explanation UI remain future work. A future dependent-pool stage must
+read each branch's upstream state rather than its expectation. Resolution must
+retain the joint state its policy needs; reducing counts cannot recover die histories.

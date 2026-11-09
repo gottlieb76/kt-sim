@@ -11,8 +11,9 @@ and percentages. Kill Team combat resolution is not implemented yet.
 
 See the [living roadmap](docs/roadmap.md) for milestones and deliverables, and
 the [linked backlog](docs/probability-lab-backlog.md) for evolving ideas and
-acceptance criteria. Next: code-first experiment composition with minimal
-stage inspection.
+acceptance criteria. A bounded immutable stage API now supports code-first composition with complete
+die histories; the workbench still uses the efficient count-only calculator.
+Next: connect composed experiments to minimal stage inspection.
 
 ## Development
 

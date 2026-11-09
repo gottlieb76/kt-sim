@@ -10,11 +10,14 @@ export type PoolConfig = Readonly<{
   rerolls: number
   policy: RerollPolicy
 }>
-export type PoolState = Readonly<{ misses: number; hits: number; crits: number; eligible: number }>
+/** Reduced state: original eligible misses are retained, but die identities and histories are discarded. */
+export type PoolState = Readonly<{
+  misses: number; hits: number; crits: number; eligible: number; eligibleMisses: number
+}>
 export type PoolStage = Readonly<{ name: string; distribution: Distribution<PoolState> }>
 
 function key(state: PoolState): string {
-  return `${state.misses},${state.hits},${state.crits},${state.eligible}`
+  return `${state.misses},${state.hits},${state.crits},${state.eligible},${state.eligibleMisses}`
 }
 
 function aggregate(tree: ProbabilityTree<PoolState>): Distribution<PoolState> {
@@ -37,11 +40,12 @@ export function calculatePool(config: PoolConfig): readonly PoolStage[] {
   const eligible = (face: number) => policy === 'twos' ? face === 2
     : policy === 'misses' ? outcome(face) === 'misses' : outcome(face) !== 'crits'
   const faces = Array.from({ length: 6 }, (_, index) => index + 1)
-  let distribution = certain<PoolState>({ misses: 0, hits: 0, crits: 0, eligible: 0 })
+  let distribution = certain<PoolState>({ misses: 0, hits: 0, crits: 0, eligible: 0, eligibleMisses: 0 })
   for (let index = 0; index < dice; index++) {
     distribution = aggregate(ProbabilityTree.from('Pool', distribution).then('Roll die', state =>
       faces.map(face => ({
-        value: { ...state, [outcome(face)]: state[outcome(face)] + 1, eligible: state.eligible + Number(eligible(face)) },
+        value: { ...state, [outcome(face)]: state[outcome(face)] + 1, eligible: state.eligible + Number(eligible(face)),
+          eligibleMisses: state.eligibleMisses + Number(eligible(face) && outcome(face) === 'misses') },
         probability: new Fraction(1, 6),
       }))))
   }
@@ -50,13 +54,14 @@ export function calculatePool(config: PoolConfig): readonly PoolStage[] {
     distribution = aggregate(ProbabilityTree.from('Pool', distribution).then('Reroll', state => {
       if (state.eligible === 0) return certain(state)
       // Misses first, then hits; the explicit face-2 policy follows its configured category.
-      const removed = policy === 'twos' ? outcome(2) : state.misses > 0 ? 'misses' : 'hits'
+      const removed = policy === 'twos' ? outcome(2) : state.eligibleMisses > 0 ? 'misses' : 'hits'
       return faces.map(face => ({
         value: {
           ...state,
           [removed]: state[removed] - 1,
           [outcome(face)]: state[outcome(face)] - Number(removed === outcome(face)) + 1,
           eligible: state.eligible - 1,
+          eligibleMisses: state.eligibleMisses - Number(removed === 'misses'),
         },
         probability: new Fraction(1, 6),
       }))

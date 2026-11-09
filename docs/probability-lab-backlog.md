@@ -77,6 +77,13 @@ Acceptance criteria:
 - [ ] Document how dependent-pool and resolution extensions can use the contract.
 - [ ] Provide a small deterministic extension and contract tests; do not execute arbitrary browser-provided scripts.
 
+Implementation progress (tech debt #20): the bounded complete-history API now
+provides immutable die snapshots and separate roll/select/reroll/classify/assign
+operations, typed state requirements, explicit limits, and independent examples.
+The reduced calculator remains a separate representation; general experiment
+orchestration and workbench integration are still pending. These partial foundations
+do not mark the complete acceptance criteria as delivered.
+
 Next deliverable: Compose experiments. Implement before #5; add independent small-case verification from #12 alongside it. Preserve the existing calculator behavior during migration.
 
 Roadmap: `docs/roadmap.md`. D6 first; exact arithmetic. Generic experiment export/import and save/share remain deferred.
