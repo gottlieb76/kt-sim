@@ -14,6 +14,8 @@ decision.
 
 - [0001: Browser application without a required backend](0001-browser-application-without-required-backend.md) — Accepted.
 - [0002: Clean architecture and pragmatic SOLID principles](0002-clean-architecture-and-solid-principles.md) — Accepted.
+- [0003: Exact, deterministic probability evaluation](0003-exact-deterministic-probability-evaluation.md) — Accepted.
+- [0004: Immutable state and single-purpose stages](0004-immutable-state-and-single-purpose-stages.md) — Accepted.
 
 Capture enough context for someone to understand the decision, alternatives,
 consequences, and how it will be validated. Larger refactorings should describe
