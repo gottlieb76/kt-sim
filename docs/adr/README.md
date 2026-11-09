@@ -13,6 +13,7 @@ decision.
 ## Decisions
 
 - [0001: Browser application without a required backend](0001-browser-application-without-required-backend.md) — Accepted.
+- [0002: Clean architecture and pragmatic SOLID principles](0002-clean-architecture-and-solid-principles.md) — Accepted.
 
 Capture enough context for someone to understand the decision, alternatives,
 consequences, and how it will be validated. Larger refactorings should describe
