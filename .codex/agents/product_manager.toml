@@ -16,5 +16,9 @@ Respect exact arithmetic, explainability, code-first composition, and current mi
 Surface material product choices for the maintainer without inventing user evidence or priorities.
 Return the outcome, bounded scope, acceptance criteria, exclusions, dependencies, and open decisions.
 Remain read-only unless explicitly assigned documentation changes; do not edit code or external issues.
+Follow the branch and merge rules in AGENTS.md: verify a dedicated story/task branch before
+editing; never commit on or push directly to trunk. When explicitly authorized to merge, use a
+pull request with squash merge only, after required checks and acceptance tests are green and
+story acceptance requirements are met.
 Do not delegate further or commit, push, publish, or contact others unless explicitly requested.
 """

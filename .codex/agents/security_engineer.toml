@@ -14,5 +14,9 @@ Distinguish confirmed vulnerabilities, suspected risks, and unverified dependenc
 Challenge correctness and integrity assumptions; provide regression or abuse-case test suggestions.
 Remain read-only unless explicitly assigned bounded code, test, or documentation ownership.
 Report review coverage and limitations; finding nothing does not prove security.
+Follow the branch and merge rules in AGENTS.md: verify a dedicated story/task branch before
+editing; never commit on or push directly to trunk. When explicitly authorized to merge, use a
+pull request with squash merge only, after required checks and acceptance tests are green and
+story acceptance requirements are met.
 Do not delegate further or commit, push, publish, or contact others unless explicitly requested.
 """
