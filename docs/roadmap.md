@@ -50,7 +50,9 @@ than multiplying their marginal distributions.
 2. Compose the existing calculator example through the API (#5), preserving its
    exact distributions and configuration behavior. Code defines and reorders
    stages; the workbench displays names, stage selection, results, and actionable
-   errors. Full visual chain editing and browser-provided scripts are deferred.
+   errors. Preserve the existing 1–12 dice calculator; a bounded complete-history
+   example may initially coexist with its reduced evaluation. Full visual chain
+   editing and browser-provided scripts are deferred.
 3. Document a complete experiment and small extension. Describe how dependent
    pools and resolution fit the contracts without implementing every future
    operation in this first deliverable.
@@ -62,6 +64,15 @@ than multiplying their marginal distributions.
 **Done:** a developer can define and extend a named experiment in TypeScript
 and inspect its exact stage results. Dependent pools, opposing resolution, and
 deep path explanations are subsequent deliverables.
+
+**Refinement status:** #4 defines the next engine/API story, including named-stage
+results, validation timing, retention boundaries, examples, and explicit limits.
+Reuse the implemented immutable operations rather than treating them as missing.
+#5 is adjusted for these contracts but awaits detailed refinement of its example,
+UI flow, supported configurations, and execution approach. Full-history evaluation
+cannot support seven initial D6s under current operation limits; rerolls can hit
+the tree limit sooner. Do not regress calculator support or silently change retention
+strategies. Assess responsiveness before exposing costly experiments (#11).
 
 ### Milestone completion examples
 
