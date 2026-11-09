@@ -64,12 +64,17 @@ describe('dice pool calculator', () => {
   })
 
   it('conserves mass and dice counts at every stage for the largest supported pool', () => {
-    for (const stage of calculatePool({ ...config, dice: 12, rerolls: 12 })) {
-      const total = stage.distribution.reduce((sum, branch) => sum.add(branch.probability), new Fraction(0))
-      expect(total.toString()).toBe('1')
-      for (const { value } of stage.distribution) {
-        expect(value.misses + value.hits + value.crits).toBe(12)
-        expect(Math.min(value.misses, value.hits, value.crits, value.eligible)).toBeGreaterThanOrEqual(0)
+    for (const policy of ['misses', 'twos', 'non-crits'] as const) {
+      for (const stage of calculatePool({ ...config, dice: 12, rerolls: 12, policy })) {
+        const total = stage.distribution.reduce((sum, branch) => sum.add(branch.probability), new Fraction(0))
+        expect(total.toString()).toBe('1')
+        for (const { value } of stage.distribution) {
+          expect(value.misses + value.hits + value.crits).toBe(12)
+          expect(Math.min(value.misses, value.hits, value.crits, value.eligible, value.eligibleMisses)).toBeGreaterThanOrEqual(0)
+          expect(value.eligibleMisses).toBeLessThanOrEqual(value.misses)
+          expect(value.eligibleMisses).toBeLessThanOrEqual(value.eligible)
+          expect(value.eligible).toBeLessThanOrEqual(12)
+        }
       }
     }
   })
@@ -79,4 +84,47 @@ describe('dice pool calculator', () => {
     expect(() => calculatePool({ ...config, rerolls: 5 })).toThrow()
     expect(() => calculatePool({ ...config, critTarget: 7 })).toThrow()
   })
+})
+
+it('Given two non-critical dice can be rerolled, When both budget slots are used, Then replacements stay ineligible', () => {
+  const stages = calculatePool({ ...config, dice: 2, rerolls: 2, policy: 'non-crits' })
+  // Each original die succeeds either as an untouched 6, or after a reroll of 1–5.
+  expect(poolSummary(stages[2].distribution).allSuccesses.toString()).toBe('169/324')
+})
+
+it('matches independent original-die enumeration across budgets, policies, and threshold extremes', () => {
+  for (const hitTarget of [2, 3, 6]) for (const critTarget of [2, 6]) {
+    for (const policy of ['misses', 'twos', 'non-crits'] as const) for (const rerolls of [0, 1, 2]) {
+      const counts = new Map<string, number>()
+      for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) {
+        // Decide all original target IDs before seeing any replacement.
+        const original = [a, b]
+        const candidates = [0, 1].filter(id => policy === 'twos' ? original[id] === 2
+          : policy === 'misses' ? original[id] < Math.min(hitTarget, critTarget)
+          : original[id] < critTarget)
+        if (policy === 'non-crits') candidates.sort((left, right) =>
+          Number(original[left] >= hitTarget) - Number(original[right] >= hitTarget) || left - right)
+        const targets = candidates.slice(0, rerolls)
+        // Enumerate two dummy replacement slots even if no replacement is needed.
+        for (let r1 = 1; r1 <= 6; r1++) for (let r2 = 1; r2 <= 6; r2++) {
+          const faces = [...original]
+          targets.forEach((id, index) => { faces[id] = [r1, r2][index] })
+          const crits = faces.filter(face => face >= critTarget).length
+          const hits = faces.filter(face => face >= hitTarget && face < critTarget).length
+          const key = `${hits},${crits}`
+          counts.set(key, (counts.get(key) ?? 0) + 1)
+        }
+      }
+      const stages = calculatePool({ dice: 2, hitTarget, critTarget, policy, rerolls })
+      const actual = new Map<string, Fraction>()
+      for (const { value, probability } of stages[rerolls].distribution) {
+        const key = `${value.hits},${value.crits}`
+        actual.set(key, (actual.get(key) ?? new Fraction(0)).add(probability))
+        expect(value.misses + value.hits + value.crits).toBe(2)
+        expect(probability.numerator >= 0n).toBe(true)
+      }
+      expect(actual.size).toBe(counts.size)
+      for (const [key, count] of counts) expect(actual.get(key)?.toString()).toBe(new Fraction(count, 1296).toString())
+    }
+  }
 })

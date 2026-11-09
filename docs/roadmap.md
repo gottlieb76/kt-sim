@@ -10,7 +10,12 @@ milestones because the connected tooling cannot create native milestones.
 The app has an exact D6 calculator with a fixed roll/classify/reroll sequence
 and stage inspection. The low-level tree supports typed state transitions and
 retained paths; the pool calculator aggregates counts and discards individual
-histories. All deliverables below remain planned. See the
+histories. Original eligible miss counts are retained to prevent rerolling replacements.
+A bounded, immutable complete-history stage API now separates rolling, selection,
+rerolling, classification, and assignment. Calculator orchestration is independent
+of React and the workbench handles evaluation errors. These foundations partially
+implement Compose experiments; the workbench still uses the reduced fixed pipeline,
+and the deliverable is not yet complete. See the
 [engine documentation](probability-engine.md) for implemented behavior.
 
 ## Milestone 1 — Probability Lab: the base engine

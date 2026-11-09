@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Fraction, ProbabilityTree } from './engine'
-import { calculatePool, poolSummary } from './engine/pool'
+import { Fraction } from './engine'
+import { evaluatePool } from './application/pool-analysis'
 import type { PoolConfig, RerollPolicy } from './engine/pool'
 import './App.css'
 
@@ -12,13 +12,7 @@ const policies: Record<RerollPolicy, string> = {
 function App() {
   const [config, setConfig] = useState<PoolConfig>(initial)
   const [stageIndex, setStageIndex] = useState<number | null>(null)
-  const stages = useMemo(() => calculatePool(config), [config])
-  const selectedIndex = Math.min(stageIndex ?? stages.length - 1, stages.length - 1)
-  const selected = stages[selectedIndex]
-  const summary = poolSummary(selected.distribution)
-  const baseline = poolSummary(stages[0].distribution)
-  const successes = ProbabilityTree.from('Results', selected.distribution).evaluate(state => state.hits + state.crits)
-  const joint = ProbabilityTree.from('Results', selected.distribution).evaluate(state => `${state.hits},${state.crits}`)
+  const analysis = useMemo(() => evaluatePool(config, stageIndex), [config, stageIndex])
   const numberControl = (label: string, field: 'dice' | 'hitTarget' | 'critTarget' | 'rerolls', min: number, max: number) => (
     <label>{label}<select value={config[field]} onChange={event => {
       const value = Number(event.target.value)
@@ -54,41 +48,55 @@ function App() {
           </section>
           <button className="reset" onClick={() => { setConfig(initial); setStageIndex(null) }}>Reset example</button>
         </aside>
-        <div className="results">
-          <section className="panel"><div className="section-heading"><h2>Chain analysis</h2><span className="badge">LIVE · EXACT</span></div>
-            <p className="muted">Select a stage to inspect its full distribution.</p>
-            <div className="table-scroll"><table className="stages"><thead><tr><th>Stage</th><th>Expected successes</th><th>Expected crits</th><th>All dice succeed</th></tr></thead><tbody>
-              {stages.map((stage, index) => { const stats = poolSummary(stage.distribution); return <tr key={stage.name} className={index === selectedIndex ? 'selected' : ''}>
-                <th><button aria-pressed={index === selectedIndex} onClick={() => setStageIndex(index)}>{stage.name}</button></th>
-                <td title={stats.successes.toString()}>{stats.successes.toNumber().toFixed(3)}</td><td title={stats.crits.toString()}>{stats.crits.toNumber().toFixed(3)}</td>
-                <td title={stats.allSuccesses.toString()}>{stats.allSuccesses.toPercentage()}</td></tr> })}
-            </tbody></table></div>
-          </section>
-          <section className="metrics" aria-live="polite">
-            <div className="panel"><p>Expected successes</p><strong>{summary.successes.toNumber().toFixed(3)} <small>/ {config.dice}</small></strong>
-              <span className="muted">{summary.successes.toString()} exact · started at {baseline.successes.toNumber().toFixed(3)}</span></div>
-            <div className="panel"><p>At least one crit</p><strong>{summary.anyCrit.toPercentage()}</strong><span className="muted">{summary.anyCrit.toString()} exact</span></div>
-          </section>
-          <section className="panel"><h2>Success distribution</h2><p className="muted">{selected.name} · ordinary hits + crits</p>
-            <div className="bars">{Array.from({ length: config.dice + 1 }, (_, count) => {
-              const probability = successes.get(count) ?? new Fraction(0)
-              return <div className="bar-row" key={count}><span>{count} {count === 1 ? 'success' : 'successes'}</span>
-                <div className="track"><div style={{ width: probability.toPercentage(6) }} /></div>
-                <b>{probability.toPercentage()}</b><small>{probability.toString()}</small></div>
-            })}</div>
-          </section>
-          <section className="panel"><h2>Detailed outcomes</h2><p className="muted">Mutually exclusive outcomes after {selected.name.toLowerCase()}. Percentages are rounded; fractions are exact.</p>
-            <details><summary>Show hits, crits, and misses ({joint.size} outcomes)</summary><div className="table-scroll"><table><thead><tr><th>Hits</th><th>Crits</th><th>Misses</th><th>Probability</th><th>Exact</th></tr></thead><tbody>
-              {[...joint].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([key, probability]) => {
-                const [hits, crits] = key.split(',').map(Number)
-                return <tr key={key}><td>{hits}</td><td>{crits}</td><td>{config.dice - hits - crits}</td><td>{probability.toPercentage()}</td><td>{probability.toString()}</td></tr>
-              })}
-            </tbody></table></div></details>
-          </section>
-        </div>
+        {analysis.status === 'error' ? <section className="panel" role="alert">
+          <h2>Unable to calculate</h2><p>{analysis.message}</p>
+          <p>Adjust the settings or reset the example to try again. No partial results are shown.</p>
+        </section> : <PoolResults analysis={analysis} dice={config.dice} onSelect={setStageIndex} />}
       </div>
       <footer>Probability sandbox · No saves, damage, or other Kill Team rules applied.</footer>
     </main>
+  )
+}
+
+function PoolResults({ analysis, dice, onSelect }: {
+  analysis: Extract<ReturnType<typeof evaluatePool>, { status: 'ready' }>
+  dice: number
+  onSelect: (index: number) => void
+}) {
+  const { stages, selectedIndex, selected, summary, baseline, successes, joint } = analysis
+  return (
+    <div className="results">
+      <section className="panel"><div className="section-heading"><h2>Chain analysis</h2><span className="badge">LIVE · EXACT</span></div>
+        <p className="muted">Select a stage to inspect its full distribution.</p>
+        <div className="table-scroll"><table className="stages"><thead><tr><th>Stage</th><th>Expected successes</th><th>Expected crits</th><th>All dice succeed</th></tr></thead><tbody>
+          {stages.map((stage, index) => { const stats = stage.summary; return <tr key={stage.name} className={index === selectedIndex ? 'selected' : ''}>
+            <th><button aria-pressed={index === selectedIndex} onClick={() => onSelect(index)}>{stage.name}</button></th>
+            <td title={stats.successes.toString()}>{stats.successes.toNumber().toFixed(3)}</td><td title={stats.crits.toString()}>{stats.crits.toNumber().toFixed(3)}</td>
+            <td title={stats.allSuccesses.toString()}>{stats.allSuccesses.toPercentage()}</td></tr> })}
+        </tbody></table></div>
+      </section>
+      <section className="metrics" aria-live="polite">
+        <div className="panel"><p>Expected successes</p><strong>{summary.successes.toNumber().toFixed(3)} <small>/ {dice}</small></strong>
+          <span className="muted">{summary.successes.toString()} exact · started at {baseline.successes.toNumber().toFixed(3)}</span></div>
+        <div className="panel"><p>At least one crit</p><strong>{summary.anyCrit.toPercentage()}</strong><span className="muted">{summary.anyCrit.toString()} exact</span></div>
+      </section>
+      <section className="panel"><h2>Success distribution</h2><p className="muted">{selected.name} · ordinary hits + crits</p>
+        <div className="bars">{Array.from({ length: dice + 1 }, (_, count) => {
+          const probability = successes.get(count) ?? new Fraction(0)
+          return <div className="bar-row" key={count}><span>{count} {count === 1 ? 'success' : 'successes'}</span>
+            <div className="track"><div style={{ width: probability.toPercentage(6) }} /></div>
+            <b>{probability.toPercentage()}</b><small>{probability.toString()}</small></div>
+        })}</div>
+      </section>
+      <section className="panel"><h2>Detailed outcomes</h2><p className="muted">Mutually exclusive outcomes after {selected.name.toLowerCase()}. Percentages are rounded; fractions are exact.</p>
+        <details><summary>Show hits, crits, and misses ({joint.size} outcomes)</summary><div className="table-scroll"><table><thead><tr><th>Hits</th><th>Crits</th><th>Misses</th><th>Probability</th><th>Exact</th></tr></thead><tbody>
+          {[...joint].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([key, probability]) => {
+            const [hits, crits] = key.split(',').map(Number)
+            return <tr key={key}><td>{hits}</td><td>{crits}</td><td>{dice - hits - crits}</td><td>{probability.toPercentage()}</td><td>{probability.toString()}</td></tr>
+          })}
+        </tbody></table></div></details>
+      </section>
+    </div>
   )
 }
 
