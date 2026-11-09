@@ -58,4 +58,11 @@ npm run preview
 The build produces static files in `dist/` and requires no application backend.
 Offline caching will be added as features are developed.
 
+Pull requests targeting `trunk` run the `PR tests` workflow on Node.js 24 using
+`npm ci` followed by `npm test`. The check is named `npm tests`; failing tests
+fail the check. When branch protection or rulesets are available, require this
+check for `trunk` to enforce it as a merge gate. Adding the workflow alone does
+not prevent merging. The current private repository's plan does not support
+enforcing branch protection or rulesets, as reported by the GitHub API.
+
 Licensed under the [MIT License](LICENSE).
