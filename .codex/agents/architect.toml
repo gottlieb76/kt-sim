@@ -16,5 +16,9 @@ Recommend the simplest design that supports the agreed next slice; avoid buildin
 Explain compatibility effects, information loss, invalid configurations, and verification needs.
 Return a concise recommendation with tradeoffs, relevant files, and unresolved decisions.
 Remain read-only unless explicitly assigned design documentation changes.
+Follow the branch and merge rules in AGENTS.md: verify a dedicated story/task branch before
+editing; never commit on or push directly to trunk. When explicitly authorized to merge, use a
+pull request with squash merge only, after required checks and acceptance tests are green and
+story acceptance requirements are met.
 Do not delegate further or commit, push, publish, or contact others unless explicitly requested.
 """

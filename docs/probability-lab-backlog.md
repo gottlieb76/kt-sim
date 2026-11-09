@@ -2,7 +2,8 @@
 
 See the [living roadmap](roadmap.md) for milestone outcomes, delivery order,
 status, and completion examples. The issues below are evolving idea seeds.
-Only Compose experiments (#4 and #5) is refined as the next deliverable.
+Compose experiments is the next deliverable: #4 is refined for implementation;
+#5 reflects its integration constraints and awaits detailed refinement.
 All original acceptance criteria are retained or explicitly revised for the
 code-first direction. Offline use is independently scheduled.
 
@@ -64,29 +65,56 @@ Roadmap: `docs/roadmap.md`. D6 first; exact arithmetic. Generic experiment expor
 
 GitHub: [#4](https://github.com/gottlieb76/kt-sim/issues/4)
 
-Part of Milestone 1 — Probability Lab: the base engine (#14).
+Part of **Milestone 1 — Probability Lab (#14) → Compose experiments**. Prerequisite to workbench integration in #5.
 
-Specify the typed TypeScript contracts for named stages, input requirements, retained state, and inspectable results. Keep the implementation in src/engine independent of React and named game rules.
+### User problem and value
 
-Acceptance criteria:
-- [ ] Describe contracts for roll, classify, reroll, transform, resolve, and query stages; implement the composition foundation without implementing every future operation.
-- [ ] Make face-level information, original-versus-rerolled dice, and aggregation information loss explicit.
-- [ ] Catch incompatible state types through the typed API; reject invalid configuration and unmet information requirements before evaluation.
-- [ ] Retain upstream values deliberately; distinguish conditional dependent pools from independent pool combinations.
-- [ ] Use exact fractions and explicit evaluation limits; report failures without partial or approximate distributions.
-- [ ] Document how dependent-pool and resolution extensions can use the contract.
-- [ ] Provide a small deterministic extension and contract tests; do not execute arbitrary browser-provided scripts.
+A developer can use individual immutable dice operations today, but there is no documented experiment-level contract for composing named stages, checking their requirements, and obtaining inspectable intermediate results. The workbench still uses a separate fixed calculator.
 
-Implementation progress (tech debt #20): the bounded complete-history API now
-provides immutable die snapshots and separate roll/select/reroll/classify/assign
-operations, typed state requirements, explicit limits, and independent examples.
-The reduced calculator remains a separate representation; general experiment
-orchestration and workbench integration are still pending. These partial foundations
-do not mark the complete acceptance criteria as delivered.
+**Story:** As a developer, I can define and extend a bounded, named D6 experiment in TypeScript, validate its supported connections and configuration, and evaluate exact intermediate results without depending on React.
 
-Next deliverable: Compose experiments. Implement before #5; add independent small-case verification from #12 alongside it. Preserve the existing calculator behavior during migration.
+This story delivers the engine/API increment. #5 delivers its workbench integration.
 
-Roadmap: `docs/roadmap.md`. D6 first; exact arithmetic. Generic experiment export/import and save/share remain deferred.
+### Existing foundation — reuse and verify
+
+#20 / PR #21 supplied typed immutable complete-history snapshots, stable die identity and roll/interpretation provenance, separate roll/select/reroll/classify/assign operations, recorded branch-specific selections, once-per-die validation, operation/tree limits, independent examples, and calculator/application separation. These are implemented foundations, not a claim that this story's remaining acceptance criteria are complete.
+
+The reduced calculator deliberately discards die histories and supports 1–12 dice. The complete-history API has a 100,000-alternative per-operation limit and a separate active-branch limit; even seven initial D6s exceed the operation limit, and rerolls can exhaust the tree limit sooner.
+
+### Required behavior and acceptance criteria
+
+- [ ] **Define and compose:** A complete public TypeScript example defines an initial state and ordered named stages with explicit input/output types and information requirements. Supported reordering is expressed in code. Reuse existing primitives where sufficient; no new graph language or plugin framework is required.
+- [ ] **Validate:** Incompatible state connections fail in compile-time contract tests. Statically knowable configuration and information errors are rejected before branch expansion; conditions dependent on a branch are checked during evaluation. Errors identify the failing stage, reason, and a useful correction.
+- [ ] **Inspect:** Evaluation exposes each named stage's exact result through a documented React-independent result contract suitable for #5. It distinguishes retained branch state from grouped distribution views. Grouping for inspection does not discard state needed by later stages. If a later stage fails, the evaluation reports failure and does not present earlier results as a completed experiment.
+- [ ] **Preserve state:** Built-in operations and the documented extension preserve immutable prior snapshots, stable identity, ordered provenance, explicit choices, and upstream values required later. Rerolling invalidates current classification; consumers requiring classifications reject stale or missing interpretations. Reduced count states are rejected by operations requiring discarded facts.
+- [ ] **Stay exact and bounded:** Successful evaluation uses reduced bigint fractions, nonnegative normalized conditional distributions, and explicit operation and whole-experiment branch limits. Document how limits compose and exercise both failure paths. Never truncate, approximate, or silently change retention/evaluation strategy.
+- [ ] **Demonstrate extension and order:** Document and test one complete small experiment and one deterministic developer-defined extension. A known small case demonstrates a meaningful stage-order difference with independently established expected probabilities. Trusted callbacks must be deterministic and respect the immutable state contract.
+- [ ] **Explain future compatibility:** Document how roll, select, reroll, classify, transform/assign, resolve, and query responsibilities fit the contract. Describe how #18 would consume a retained branch-specific count, including zero, and how #8 would preserve joint upstream state and explicit decision policies. Distinguish independent inputs from shared dependencies. Dependent-pool and resolution implementations are not required here.
+- [ ] **Preserve the calculator boundary:** Keep the existing 1–12 dice calculator and its exact supported configuration behavior. Document reduced versus complete-history capabilities and limits; neither representation claims information it discarded. #5 may initially integrate a bounded composed example alongside the calculator.
+- [ ] **Verify and document:** Cover invalid configuration/connections, retained state, immutable successors, stage ordering, and operation/tree limit failures. Use independent small-case enumeration or known mathematical examples alongside mass conservation, nonnegative probabilities, and applicable count invariants; production evaluation is not its own oracle. Run typecheck, lint, tests, and build. Update engine documentation and roadmap progress accurately.
+
+### Implementation tasks within this story
+
+These are implementation tasks under this deliverable, not separate releasable stories. Each task is attached as a native GitHub sub-issue of this story. The checklist below also records the implementation order.
+
+- [ ] #22 — Map acceptance gaps and review the experiment contract (engineer + architect).
+- [ ] #23 — Implement typed composition and inspectable stage results (engineer).
+- [ ] #24 — Enforce stage validation and exact limits; review changed boundaries (engineer + security).
+- [ ] #25 — Add runnable examples and independent mathematical verification (engineer).
+- [ ] #26 — Document contracts and assemble delivery verification evidence (engineer).
+- [ ] #27 — Independently evaluate the delivered story before final acceptance (tester).
+
+Order: #22 first; #23 and #24 follow its reviewed contract and coordinate shared files; #25 follows the implementation; #26 prepares the delivery evidence; #27 evaluates the delivered revision and verifies fixes. Tester planning may start earlier. Final story acceptance requires #27's evaluation and disposition of its material findings, not merely completion of engineering tasks.
+
+Follow accepted ADRs 0001–0004. A larger architectural change needs an explicit proposal rather than being hidden in this story.
+
+### Scope boundaries and completion
+
+D6 first; generic engine code in `src/engine`, independent of React and named game rules. No workbench changes, full visual editor, browser-provided scripts, workers/cancellation (#11), new optimized evaluator, arbitrary serialization/import, named rules, deep explanation UI (#3), dependent pools (#18), or opposing resolution (#8).
+
+Complete when a developer can run the documented experiment and extension, inspect exact named-stage results, and observe clear invalid/oversized evaluation failures with the criteria above demonstrated. Existing foundations alone do not close this issue. Add capability-specific verification from #12 alongside delivery; the whole of #12 is not a prerequisite.
+
+Roadmap: `docs/roadmap.md`. Detailed backlog: `docs/probability-lab-backlog.md`. #5 remains subject to its own refinement.
 
 ## Next / Compose experiments — Compose code-first experiments and inspect stages
 
@@ -96,15 +124,24 @@ Part of Milestone 1 — Probability Lab: the base engine (#14).
 
 Depends on #4. Next deliverable: Compose experiments.
 
-Replace the fixed calculator pipeline with a code-defined experiment using a typed TypeScript API. Keep the workbench minimal; a full visual chain editor is deferred.
+Use the experiment and stage-result contracts delivered by #4 to inspect a code-defined experiment in a minimal workbench. Preserve the existing calculator's 1–12 D6 support and configuration behavior. A bounded complete-history example may initially coexist with the efficient reduced calculator; replacing the calculator with full-history enumeration is not required.
 
-Acceptance criteria:
-- [ ] Define named stages, their input requirements, and retained state in TypeScript; allow composition and supported reordering in code.
-- [ ] Reproduce the current roll/classify/reroll example with identical exact distributions and existing configuration behavior.
-- [ ] Expose stage names, exact distributions, and stage selection in the workbench.
-- [ ] Show actionable invalid-configuration and evaluation-limit errors without misleading partial results.
-- [ ] Document a complete small experiment and an extension example; no named game-rule linkage or arbitrary user script execution.
-- [ ] Verify a case where stage order changes the result, invalid connections, retained state, and unchanged calculator results.
+### Impact of #4 refinement — provisional
+
+#4 owns the engine/API composition, validation, retention, and stage-result contracts. This story owns their workbench integration. Reduced distributions and complete histories have different capabilities and limits; the UI must make the selected example's supported behavior clear and must not imply that discarded histories are available.
+
+The current complete-history operation limit cannot accommodate seven initial D6s, and rerolls can reach the tree limit sooner. Do not reduce existing calculator support or silently switch evaluation/retention strategies to satisfy this story.
+
+Detailed refinement remains open: select the bounded example, UI flow, supported configuration envelope, and execution approach after #4's contracts are demonstrated. Assess responsiveness and bring in the needed portion of #11 before exposing costly evaluation. A full visual chain editor remains deferred.
+
+Acceptance criteria (carry forward for later refinement):
+- [ ] Integrate #4's named stages, input requirements, and retained state; allow composition and supported reordering in developer code.
+- [ ] Reproduce the current roll/classify/reroll example with identical exact distributions and existing configuration behavior; retain the existing 1–12 dice calculator, with coexistence permitted.
+- [ ] Expose stage names, exact distributions, and stage selection in the workbench; distinguish reduced results from retained histories and identify supported limits.
+- [ ] Show actionable invalid-configuration and evaluation-limit errors without misleading partial or stale results.
+- [ ] Document the runnable workbench example using #4's complete experiment and extension documentation; no named game-rule linkage or arbitrary user script execution.
+- [ ] Verify integration of stage ordering, invalid connections, retained state, and unchanged calculator results, reusing #4's engine evidence and adding UI-specific coverage.
+- [ ] Check accessible labels, keyboard use, responsive presentation, and useful error/loading/empty states where applicable; inspect rendered UI when tooling is available.
 - [ ] Run typecheck, lint, tests, and build.
 
 Dependent pool construction (#18), opposing resolution (#8), deep explanations (#3), and a richer visual builder are subsequent deliverables.

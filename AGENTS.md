@@ -81,6 +81,12 @@
 - Documentation-only changes need link/content checks, not the full app suite.
 - Update affected documentation and roadmap status when behavior is delivered.
   Summarize what changed, evidence of correctness, and remaining limitations.
+- Work on a dedicated story or task branch. Before editing files, verify the
+  current branch; create or switch to the appropriate working branch if needed.
+  Never commit work on or push directly to `trunk`.
+- Integrate changes through pull requests using squash merge only. Merge only
+  when required checks, including acceptance tests, are green and the story
+  acceptance requirements are met. Do not merge unless the user requests it.
 - Preserve unrelated work. Do not commit, push, publish, or contact others unless
   the user requests it. Keep shared instructions free of secrets and local paths.
 
